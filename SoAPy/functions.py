@@ -611,6 +611,159 @@ def generate_spectrum(fwhm, number_of_points, dir_list, dir_parameters, dir_freq
 
 
 
+def custom_collect_data(cwd, dir_list, dir_parameters, conformer, interval, top_out, averaging):
+    """
+    Collects the data from the Gaussian output files for spectral generation.
+    """
+    # Initialize directory level arrays.
+    dir_frequencies = []
+    dir_intensities = []
+    dir_nbf = []
+
+    # Change to test specific directory.
+    for a in range(len(dir_list)):
+        print("____________________________")
+        print(f"Spectroscopy: {dir_parameters[a][0]} || Solvent Shell Type: {dir_parameters[a][1]} || Functional: {dir_parameters[a][2]} || Basis: {dir_parameters[a][3]} || Distance: {dir_parameters[a][4]} || Snapshots: {dir_parameters[a][5]}")
+        with open(f"{cwd}/output_data.txt", "a") as file:
+            file.write(f"Spectroscopy: {dir_parameters[a][0]} || Solvent Shell Type: {dir_parameters[a][1]} || Functional: {dir_parameters[a][2]} || Basis: {dir_parameters[a][3]} || Distance: {dir_parameters[a][4]} || Snapshots: {dir_parameters[a][5]}\n")
+
+        test_frequencies = []
+        test_intensities = []
+
+        # Obtain data from each conformer in the test.
+        conformer_count= conformer
+        #conformer_count = 1
+        iterations = 1
+        while conformer_count <= int(dir_parameters[a][5]):
+            
+            #The top_out is set in the function default args and can be left as int(dir_parameters[0][5]) unless you are controlling the samp
+            if iterations > top_out:
+                break
+            print(f"Snapshot: {conformer_count}")
+            
+            frequency = []
+            intensity = []
+            num_imaginary_frequencies = None
+            os.chdir(f"{dir_list[a]}/cmpd_{conformer_count}")
+
+            # Data collection for ROA and VCD.
+            if dir_parameters[a][0] != "OptRot":
+                with open("output.log", "r") as file_out:
+                    for line in file_out:
+                        split_line = line.split()
+                        if len(split_line) > 7:
+                            if split_line[0] == "Sum" and split_line[2] == "electronic" and split_line[6] == "Energies=":
+                                delta_G = split_line[-1]
+                        if len(split_line) > 2:
+                            if split_line[2] == "imaginary":
+                                num_imaginary_frequencies = int(split_line[1])
+                            if split_line[0] == "NAtoms=":
+                                natom = int(split_line[1])
+                            if split_line[0] == "Frequencies":
+                                frequency.extend(map(float, split_line[2:]))
+                            if dir_parameters[a][0] == "VCD":
+                                if split_line[0] == "Rot.":
+                                    intensity.extend(map(float, split_line[3:]))
+                            elif dir_parameters[a][0] == "ROA":
+                                if split_line[0] == "CID3":
+                                    intensity.extend(map(float, split_line[3:]))
+                            if num_imaginary_frequencies == None:
+                                num_imaginary_frequencies = 0
+                            if split_line[0] == "NBasis=":
+                                nbf = int(split_line[1])
+
+                    # Correcting units according to the Gaussian output.
+                    if dir_parameters[a][0] == "VCD":
+                        intensity = [i * 10**-44 for i in intensity]
+                    if dir_parameters[a][0] == "ROA":
+                        intensity = [i * 10**4 for i in intensity]
+
+                # Calculate total number of vibrations for nonlinear molecules.
+                num_vibrations = 3 * natom - 6
+
+                # Confirming that all vibrational frequencies have obtained from the Gaussian output file. This is required since some of the imaginary frequencies result in line splits that don't separate correctly.
+                #if len(frequency) == len(intensity) and len(frequency) == num_vibrations:
+                #    print("No discrepancies between frequencies and intensities obtained from output.")
+                #else:
+                #    print("Discrepancy between the frequncies, intensities, and number of vibrations.")
+
+                # The possible discrepancy between line splits and the number of vibrational frequencies can be eliminated by removing the imaginary frequencies which we choose to do regardless of whether the descrepancy exists or not.
+                real_frequencies = []
+                real_intensities = []
+                num_real_vibrations = num_vibrations - num_imaginary_frequencies
+                j = num_vibrations - 1
+                while j > num_imaginary_frequencies - 1:
+                    real_frequencies.append(frequency[j])
+                    real_intensities.append(intensity[j])
+                    j -= 1
+
+                print(f"GFE = {delta_G} \t Number of Atoms = {natom} \t Number of Basis Functions = {nbf} \t Vibrational Frequencies = {num_vibrations} \t Imaginary Frequencies = {num_imaginary_frequencies}")
+
+                # Print frequencies and intensities to output file.
+                with open(f"{cwd}/output_data.txt", "a") as file:
+                    file.write(f"Snapshot = {conformer_count} \t GFE = {delta_G} \t Number of Atoms = {natom} \t Vibrational Frequencies = {num_vibrations} \t Imaginary Frequencies = {num_imaginary_frequencies}\n")
+                    for i in range(num_real_vibrations):
+                        file.write("{:.4f} \t {:e}\n".format(real_frequencies[i], real_intensities[i]))
+                test_frequencies.extend(real_frequencies)
+                test_intensities.extend(real_intensities)
+
+            # Data collection for optical rotation.
+            elif dir_parameters[a][0] == "OptRot":
+                with open("output.log", "r") as file_out:
+                    for line in file_out:
+                        split_line = line.split()
+                        if len(split_line) > 7:
+                            if split_line[0] == "NAtoms=":
+                                natom = int(split_line[1])
+                            if split_line[0] == "Molar":
+                                #We also want to collect the Molar Mass to be able to normalize the optical rotation intensity
+                                #We will simply multiply all of our intensities by the system's molar mass and then divide by the single molecule mass in our analysis
+                                #print(float(split_line[3]))
+                                frequency.append(float(split_line[7]))
+                                #Checks the averaging argument to determine if we are using the OptRot averaging scheme
+                                if averaging == True:
+                                    intensity.append(float(split_line[10])*float(split_line[3]))
+                                elif averaging == False:
+                                    intensity.append(float(split_line[10]))
+                            if split_line[0] == "NBasis=":
+                                nbf = int(split_line[1])
+
+                    # Correcting units on incident radiation back to nanometers.
+                    frequency = [i / 10 for i in frequency]
+
+                # Appending to test level arrays.
+                test_frequencies.extend(frequency)
+                test_intensities.extend(intensity)
+
+                print(f"Number of Atoms = {natom} \t Number of Basis Functions = {nbf}")
+                
+                bot = 4*(iterations-1)
+                top = 4*(iterations)
+                
+                # Print frequencies and intensities to output file.
+                with open(f"{cwd}/output_data.txt", "a") as file:
+                    file.write(f"Snapshot = {conformer_count} \t Number of Atoms = {natom}\n")
+                    for i in range(bot, top):
+                        file.write("{:.4f} \t {:e}\n".format(test_frequencies[i], test_intensities[i]))
+
+            #Now tracking the number of times the loop has been executed AND 
+            #the specific compound number we are sampling to allow for different interval spacings
+            conformer_count += interval
+            iterations += 1
+            #conformer_count += 1
+            
+            #The top_out is set in the function default args and can be left as int(dir_parameters[0][5]) unless you are controlling the samp
+            if iterations > top_out:
+                break
+
+        dir_frequencies.append(test_frequencies)
+        dir_intensities.append(test_intensities)
+        #dir_nbf.append(nbf)
+
+    return dir_frequencies, dir_intensities, dir_nbf
+
+
+
 
 
 

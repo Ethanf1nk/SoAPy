@@ -187,6 +187,144 @@ def normal_mode_reordering(dir_frequencies, dir_intensities, sample_index, refer
     return slope_sign
 
 
+def opt_rot_averaging(dir_frequencies, dir_intensities, dir_parameters, dir_list, radius, averaging):
+    #Beta version of the running average analysis
+    #Initialize running sums for each test frequency
+    ints_633 = 0.0
+    ints_589 = 0.0
+    ints_436 = 0.0
+    ints_355 = 0.0
+
+    #Tracking the total number of negative signs in rotations
+    #Doing this to test the idea of stricted conformation sign bias
+    neg_633 = 0
+    neg_589 = 0
+    neg_436 = 0
+    neg_355 = 0
+    
+    #Lists to store the averages
+    avg_633_list = []
+    avg_589_list = []
+    avg_436_list = []
+    avg_355_list = []
+
+    #radius is a function arg that tells the function if we are investigating a changing radius
+    if radius == True:
+        for b in range(len(dir_list)):
+            ints_633 = 0.0
+            ints_589 = 0.0
+            ints_436 = 0.0
+            ints_355 = 0.0
+            chopper = 4*int(dir_parameters[b][5])
+            #The chopper splits the data in dir_frequencies and dir_intensities by radius
+            #This is done by calculating the number of entries that are associated with each radius and sampling them seperately
+            for a in range(0, chopper):
+                #Logic gates to split up the intensities to totals for their corresponding frequency
+                if dir_frequencies[b][a] == 633.0:
+                    ints_633 += dir_intensities[b][a]
+                    #The number of negative signs per frequency is tracked to show if a test/range of tests has a tendency to favor one sign
+                    if dir_intensities[b][a] < 0.0:
+                        neg_633 += 1
+                elif dir_frequencies[b][a] == 589.0:
+                    ints_589 += dir_intensities[b][a]
+                    if dir_intensities[b][a] < 0.0:
+                        neg_589 += 1
+                elif dir_frequencies[b][a] == 436.0:
+                    ints_436 += dir_intensities[b][a]
+                    if dir_intensities[b][a] < 0.0:
+                        neg_436 += 1
+                elif dir_frequencies[b][a] == 355.0:
+                    ints_355 += dir_intensities[b][a]
+                    if dir_intensities[b][a] < 0.0:
+                        neg_355 += 1
+                    
+            #Finding total number of snaps
+            tot_snaps = int(dir_parameters[b][5])
+            #Calculating the average intensity for each freq
+            #Checks the averaging argument, should only be set to True if custom_collect_data is also set to True
+            #If the averaging argument is true then we are dividing by the molar mass of one atom in the system
+            #THE SYSTEM IS WATER ONLY AT THIS TIME
+            if averaging == True:
+                avg_633 = ints_633/(tot_snaps*18.02)
+                avg_589 = ints_589/(tot_snaps*18.02)
+                avg_436 = ints_436/(tot_snaps*18.02)
+                avg_355 = ints_355/(tot_snaps*18.02)
+            
+            elif averaging == False:
+                avg_633 = ints_633/(tot_snaps)
+                avg_589 = ints_589/(tot_snaps)
+                avg_436 = ints_436/(tot_snaps)
+                avg_355 = ints_355/(tot_snaps)
+
+            #Assembling all the averages in a list
+            avg_633_list.append(avg_633)
+            avg_589_list.append(avg_589)
+            avg_436_list.append(avg_436)
+            avg_355_list.append(avg_355)
+            
+            #Print statements to inspect data if needed
+            #print(len(avg_355_list))
+            #print(ints_633, ints_589, ints_436, ints_355)
+            #print(avg_355_list)
+                
+        
+    
+    elif radius == False:    
+        #Pulling the intensities that correspond to each individual frequency tested
+        #This loop uses dir_frequecies because we are assembling a UNIQUE dir_frequencies for EACH time we run the collect_data function
+        #####
+        #This ONLY works properly when inside of a loop within the script
+        #####
+        for a in range(len(dir_frequencies[0])):
+            #Logic gates to split up the intensities to totals for their corresponding frequency
+            if dir_frequencies[b][a] == 633.0:
+                ints_633 += dir_intensities[b][a]
+                #The number of negative signs per frequency is tracked to show if a test/range of tests has a tendency to favor one sign
+                if dir_intensities[0][a] < 0.0:
+                    neg_633 += 1
+            elif dir_frequencies[0][a] == 589.0:
+                ints_589 += dir_intensities[0][a]
+                if dir_intensities[0][a] < 0.0:
+                    neg_589 += 1
+            elif dir_frequencies[0][a] == 436.0:
+                ints_436 += dir_intensities[0][a]
+                if dir_intensities[0][a] < 0.0:
+                    neg_436 += 1
+            elif dir_frequencies[0][a] == 355.0:
+                ints_355 += dir_intensities[0][a]
+                if dir_intensities[0][a] < 0.0:
+                    neg_355 += 1
+                
+        #Finding total number of snaps
+        tot_snaps = len(dir_frequencies[0])/4
+        
+        #Calculating the average intensity for each freq
+        #Checks the averaging argument, should only be set to True if custom_collect_data is also set to True
+        if averaging == True:
+            avg_633 = ints_633/(tot_snaps*18.02)
+            avg_589 = ints_589/(tot_snaps*18.02)
+            avg_436 = ints_436/(tot_snaps*18.02)
+            avg_355 = ints_355/(tot_snaps*18.02)
+        
+        elif averaging == False:
+            avg_633 = ints_633/(tot_snaps)
+            avg_589 = ints_589/(tot_snaps)
+            avg_436 = ints_436/(tot_snaps)
+            avg_355 = ints_355/(tot_snaps)
+
+        #Assembling all the averages in a list
+        avg_633_list.append(avg_633)
+        avg_589_list.append(avg_589)
+        avg_436_list.append(avg_436)
+        avg_355_list.append(avg_355)
+                
+        #avg_list = [avg_633, avg_589, avg_436, avg_355]
+        #print(avg_list)
+
+    #Printing the number of negative signs for each test
+    print("Number of negative signs: 633nm = ", neg_633, " 589nm = ", neg_589, " 436nm = ", neg_436, " 355nm = ", neg_355)
+
+    return avg_633_list, avg_589_list, avg_436_list, avg_355_list
 
 
 
