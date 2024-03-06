@@ -525,17 +525,18 @@ def collect_data(cwd, dir_list, dir_parameters):
                     # Correcting units on incident radiation back to nanometers.
                     frequency = [i / 10 for i in frequency]
 
-                # Appending to test level arrays.
-                test_frequencies.extend(frequency)
-                test_intensities.extend(intensity)
-
                 print(f"Number of Atoms = {natom} \t Number of Basis Functions = {nbf}")
 
                 # Print frequencies and intensities to output file.
                 with open(f"{cwd}/output_data.txt", "a") as file:
                     file.write(f"Snapshot = {conformer_count} \t Number of Atoms = {natom}\n")
-                    for i in range(len(test_frequencies)):
-                        file.write("{:.4f} \t {:e}\n".format(test_frequencies[i], test_intensities[i]))
+                    for i in range(len(frequency)):
+                        file.write("{:.4f} \t {:e}\n".format(frequency[i], intensity[i]))
+                        
+                # Appending to test level arrays.
+                test_frequencies.extend(frequency)
+                test_intensities.extend(intensity)
+
 
             conformer_count += 1
 
