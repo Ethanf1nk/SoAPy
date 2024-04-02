@@ -1,6 +1,6 @@
 name: SoAPy
 channels:
-  - condaforge
+  - conda-forge
 
   - defaults
 dependencies:
