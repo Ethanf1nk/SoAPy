@@ -45,6 +45,7 @@ jobs:
 
       - name: Install SoAPY
         run: |
+          conda init
           conda activate SoAPy
           pip install -e .
           pip install pytest
