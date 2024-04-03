@@ -47,8 +47,7 @@ jobs:
         run: |
           conda info 
           conda list --show-channel-urls
-          hash -r 
-          env
+          conda activate SoAPy
           pip install -e .
           pip install pytest
 
