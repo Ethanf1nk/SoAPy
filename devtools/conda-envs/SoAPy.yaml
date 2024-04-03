@@ -7,7 +7,7 @@ dependencies:
     # Base depends
   - python
   - pip
-  - setuptools
+  - hatchling
   
     # Package Depends
 
