@@ -41,13 +41,9 @@ jobs:
           activate-environment: SoAPy
           environment-file: devtools/conda-envs/SoAPy.yaml
           python-version: ${{ matrix.python-version }}
-          auto-activate-base: true
 
       - name: Install SoAPY
         run: |
-          conda info 
-          conda list --show-channel-urls
-          conda activate SoAPy
           pip install -e .
           pip install pytest
 
