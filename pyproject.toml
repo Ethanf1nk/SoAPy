@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=61.0", "versioningit~=2.0"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling", "versioningit~=2.0"]
+build-backend = "hatchling.build"
 
 # Self-descriptive entries which should always be present
 # https://packaging.python.org/en/latest/specifications/declaring-project-metadata/
