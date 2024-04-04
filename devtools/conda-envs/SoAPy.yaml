@@ -1,17 +1,19 @@
 name: SoAPy
 channels:
-  - condaforge
+  - conda-forge
 
   - defaults
 dependencies:
     # Base depends
   - python
   - pip
+  - hatchling
+  
     # Package Depends
 
+  - numpy
   - scipy
   - h5py
-  - shutil
   - requests
   - matplotlib
 
